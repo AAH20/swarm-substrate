@@ -40,8 +40,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "prepare": "npm run build",
-    "test": "npm run build && node --test dist/tests/schema.test.js dist/tests/integrity.test.js dist/tests/consensus.test.js dist/tests/killswitch.test.js dist/tests/provenance.test.js dist/tests/swarm.e2e.test.js",
+    "test": "npm run build && node --test dist/tests/schema.test.js dist/tests/integrity.test.js dist/tests/consensus.test.js dist/tests/killswitch.test.js dist/tests/provenance.test.js dist/tests/swarm.e2e.test.js dist/tests/raft.test.js dist/tests/committee-consensus.test.js dist/tests/replicated-control-plane.test.js",
     "demo": "npm run build && node dist/src/demo.js",
+    "demo:v2": "npm run build && node dist/src/demo-v2.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

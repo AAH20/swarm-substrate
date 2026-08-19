@@ -61,12 +61,45 @@ it.
   the stack (not against what the modules are supposed to do), that every
   claimed guarantee actually held.
 
+## Scaling it: hierarchical consensus and a replicated control plane
+
+Flat BFT quorum voting is O(n²) message complexity — fine at n=4, dead on
+arrival at real swarm scale. Two additions address that and the other
+structural gap in v0.1: the kill-switch and ledger were themselves single
+points of failure.
+
+- **`committee-consensus`** — partitions the swarm into committees, runs the
+  existing quorum rule inside each one, then treats each committee's
+  decision as one vote in a meta-round. This scales the *cost* of Byzantine
+  agreement down to committee size, and it scales the *fault tolerance* up a
+  level: it tolerates an entire committee being compromised, not just a
+  minority of individual nodes within one, as long as fewer than a third of
+  committees are compromised.
+- **`raft` + `replicated-control-plane`** — a real, minimal Raft
+  implementation (leader election, log replication, the leader-only-commits-
+  its-own-term rule from the Raft paper's Figure 8 case) replicates the
+  ledger and kill-switch state across control-plane replicas. This is
+  deliberately a *different* algorithm from the Byzantine quorum above, not
+  a bigger version of it: replicating your own control-plane state across
+  replicas you run yourself is a crash-fault-tolerant problem (plain
+  majority, `floor(n/2) + 1`), not a Byzantine one (swarm participants you
+  only semi-trust, `floor(2n/3) + 1`) — conflating those two is a common
+  mistake this repo deliberately avoids. Kill the current leader and a new
+  one takes over with no data loss; that's the actual "no single point of
+  failure" claim, proven by killing a node mid-test, not asserted.
+
+The network underneath Raft is simulated in-process — deterministic enough
+to test, the same way real Raft implementations (including etcd/raft) are
+tested before being wired to a real transport. The protocol logic doesn't
+know the difference; a socket-based transport would plug in unchanged.
+
 ## Try it
 
 ```bash
 npm install
-npm run demo    # runs the adversarial scenario, prints a pass/fail report
-npm test         # the same checks, as real assertions
+npm run demo      # the v0.1 adversarial scenario: integrity → provenance → consensus → kill-switch
+npm run demo:v2   # hierarchical consensus + a leader crash the control plane survives
+npm test           # the same checks, as real assertions (28 tests)
 ```
 
 The scenario (`n = 4`, quorum `= 3`, kill-switch threshold `= 2`):
@@ -100,14 +133,25 @@ be real today.
 
 ## Honest scope
 
-- Consensus is a single round, single decision, no network — not a
-  production BFT protocol.
+- Consensus (both the flat quorum and the hierarchical committee version) is
+  single-round, no network, no view changes — not a production BFT protocol
+  like PBFT, Tendermint, or HotStuff.
 - Integrity checks three specific, real attack classes; it is not a general
   content firewall.
-- The kill switch and consensus run in the same process in this reference
-  stack; production use would run runtime control genuinely out-of-process.
-- The ledger store here is in-memory (`InMemoryLedgerStore`); `pqattest`
-  itself ships a durable `FileLedgerStore` for persistent use.
+- Raft here has no snapshotting/log compaction and no cluster membership
+  changes; it's leader election and log replication, the two properties this
+  repo's claims depend on, not a complete production Raft.
+- The Raft network transport is simulated in-process, not real sockets — the
+  protocol logic is real and a real transport would plug in unchanged, but
+  this repo doesn't ship one.
+- Reads (`list`, `isQuarantined`) on `ReplicatedControlPlane` are served from
+  whichever replica you call them on; a follower's locally-applied state can
+  lag the leader's by one replication round. Call them on the current leader
+  (`cluster.currentLeader()`) for the latest committed view — this repo
+  doesn't implement Raft's read-index optimization for safe follower reads.
+- The unreplicated `InMemoryLedgerStore`/`KillSwitch` from v0.1 are still
+  here and still useful for the simpler single-process case; `pqattest`
+  itself ships a durable `FileLedgerStore` for persistent, non-replicated use.
 
 ## License
 
