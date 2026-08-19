@@ -1,0 +1,54 @@
+{
+  "name": "swarm-substrate",
+  "version": "0.1.0",
+  "description": "Reference implementation of the trust substrate underneath multi-agent swarm orchestration: integrity-checked inputs, PQ-signed provenance, Byzantine quorum consensus, out-of-band kill-switch enforcement, and independent adversarial verification, composed and running end to end.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Ahmed Hassan (A2Z SOC)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AAH20/swarm-substrate.git"
+  },
+  "keywords": [
+    "agentic-ai",
+    "multi-agent",
+    "swarm",
+    "byzantine-fault-tolerance",
+    "consensus",
+    "provenance",
+    "post-quantum",
+    "ai-safety",
+    "kill-switch",
+    "mcp"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist/src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "prepare": "npm run build",
+    "test": "npm run build && node --test dist/tests/schema.test.js dist/tests/integrity.test.js dist/tests/consensus.test.js dist/tests/killswitch.test.js dist/tests/provenance.test.js dist/tests/swarm.e2e.test.js",
+    "demo": "npm run build && node dist/src/demo.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pqattest": "github:AAH20/pqattest"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.4.0"
+  }
+}
